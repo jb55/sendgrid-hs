@@ -25,6 +25,9 @@ library
                , aeson
                , base64-bytestring
                , bytestring
+               , http-client
+               , http-client-tls
+               , time
                , lens
                , text
   hs-source-dirs:      src

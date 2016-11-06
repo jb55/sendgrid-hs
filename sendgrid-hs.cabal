@@ -26,6 +26,7 @@ library
                , base64-bytestring
                , bytestring
                , http-client
+               , case-insensitive
                , http-client-tls
                , time
                , lens

@@ -11,6 +11,7 @@ import Email.SendGrid.Data.Attachment
 import Data.Time.Clock (UTCTime)
 import Control.Lens hiding ((.=))
 import Data.Text (Text)
+import Data.Maybe (catMaybes)
 import Data.Aeson
 
 newtype TextBody = TextBody { _getTextBody :: Text }
@@ -47,7 +48,7 @@ data Email = Email {
   , _emailBatchId     :: Maybe Text
   , _emailCustomArgs  :: Maybe Value
   , _emailBody        :: (EmailBody, [EmailBody])
-  , _emailSubject     :: Maybe Text
+  , _emailSubject     :: Text
   , _emailCategories  :: [Category]
   , _emailAttachments :: [Attachment]
   }
@@ -66,7 +67,7 @@ initEmail toAddr fromAddr body =
     , _emailBatchId     = Nothing
     , _emailCustomArgs  = Nothing
     , _emailBody        = (body, [])
-    , _emailSubject     = Nothing
+    , _emailSubject     = ""
     , _emailCategories  = []
     , _emailAttachments = []
   }
@@ -79,19 +80,38 @@ instance ToJSON EmailBody where
   toJSON (EmailBody typ body) =
     object [ "type" .= typ, "value" .= body ]
 
+infixr 5 ?:
+(?:) :: Maybe a -> [a] -> [a]
+Just x  ?: xs = x : xs
+Nothing ?: xs = xs
+
+notEmpty :: [a] -> Maybe [a]
+notEmpty xs | null xs   = Nothing
+            | otherwise = Just xs
+
 instance ToJSON Email where
-  toJSON email = object [
-      "to"          .= (r : rs)
-    , "cc"          .= (email^.emailCc)
-    , "bcc"         .= (email^.emailBcc)
-    , "reply_to"    .= (email^.emailBcc)
-    , "subject"     .= (email^.emailSubject)
-    , "content"     .= (email^.emailBody)
-    , "attachments" .= (email^.emailAttachments)
-    , "categories"  .= (email^.emailCategories)
-    , "custom_args" .= (email^.emailCustomArgs)
-    , "send_at"     .= (email^.emailSendAt)
-    , "batch_id"    .= (email^.emailBatchId)
-    ]
+  toJSON email = core
     where
       (r, rs) = view emailToAddresses email
+      personalizations =
+        object $ [
+          "to" .= (r : rs)
+        ] ++ catMaybes [
+            (.=) <$> Just "cc"          <*> notEmpty (email^.emailCc)
+          , (.=) <$> Just "bcc"         <*> notEmpty (email^.emailBcc)
+          , (.=) <$> Just "custom_args" <*> (email^.emailCustomArgs)
+          , (.=) <$> Just "send_at"     <*> (email^.emailSendAt)
+        ]
+      core =
+        object $ [
+            "content" .= ((email^.emailBody._1) : (email^.emailBody._2))
+          , "from"    .= (email^.emailFromAddress)
+          , "subject" .= (email^.emailSubject)
+          , "personalizations" .= [ personalizations ]
+        ]
+        ++ catMaybes [
+            (.=) <$> Just "reply_to"    <*> notEmpty (email^.emailReplyTo)
+          , (.=) <$> Just "attachments" <*> notEmpty (email^.emailAttachments)
+          , (.=) <$> Just "categories"  <*> notEmpty (email^.emailCategories)
+          , (.=) <$> Just "batch_id"    <*> (email^.emailBatchId)
+        ]

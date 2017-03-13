@@ -18,9 +18,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules: Email.SendGrid
-
-  -- other-modules:       
-  -- other-extensions:    
+  other-modules: Email.SendGrid.Client, Email.SendGrid.Data.Attachment, Email.SendGrid.Data.Email, Email.SendGrid.Data.EmailAddress
   build-depends: base >=4.9 && <4.10
                , aeson
                , base64-bytestring

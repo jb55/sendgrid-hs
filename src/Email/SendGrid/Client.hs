@@ -14,7 +14,6 @@ import Data.Monoid ((<>))
 import Data.CaseInsensitive
 import Data.ByteString.Lazy (ByteString)
 import Email.SendGrid.Data.Email
-import Data.Text (Text)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
